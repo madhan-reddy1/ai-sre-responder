@@ -1,0 +1,53 @@
+name: SRE Responder CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC
+
+jobs:
+  respond:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax check
+        run: |
+          node --check server.js
+          node --check tools.js
+          node --check agents.js
+          node --check guardrails.js
+          node --check respond.js
+          node --check approve.js
+
+      - name: Run responder on all sample incidents
+        run: node respond.js --all
+
+      - name: Assert each verdict has a root cause and a guardrailed fix
+        run: |
+          for id in INC-1001 INC-1002 INC-1003; do
+            f="reports/incident-$id-verdict.md"
+            test -f "$f" || { echo "Missing verdict: $f"; exit 1; }
+            grep -q "## Root cause" "$f" || { echo "$f has no root cause"; exit 1; }
+            grep -q "## Proposed fix" "$f" || { echo "$f has no proposed fix"; exit 1; }
+            grep -q "Guardrail:" "$f" || { echo "$f has no guardrail decision"; exit 1; }
+            echo "$id: verdict OK"
+          done
+
+      - name: Verify approval CLI works
+        run: node approve.js --help
+
+      - name: Upload verdict reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: incident-verdicts
+          path: reports/
