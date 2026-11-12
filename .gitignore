@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Generated runtime state (not shipped; verdict reports ARE shipped as samples)
+reports/approval-state.json
+reports/approved-plan.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
